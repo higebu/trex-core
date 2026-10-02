@@ -73,7 +73,15 @@ void CTRexExtendedDriverIce::update_configuration(port_cfg_t * cfg){
     cfg->m_port_conf.fdir_conf.pballoc = RTE_ETH_FDIR_PBALLOC_64K;
     cfg->m_port_conf.fdir_conf.status = RTE_FDIR_NO_REPORT_STATUS;
     cfg->m_port_conf.rxmode.offloads = 0;
-    cfg->tx_offloads.common_required = RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE;
+    /*
+     * Keep the base MULTI_SEGS requirement: without it the ice PMD picks
+     * a vector Tx path that sends only the first segment of a chained
+     * mbuf, which is what every field-engine packet longer than its
+     * rewritten prefix is.  MBUF_FAST_FREE is not allowed here at all:
+     * it requires one mempool and refcnt 1 per queue, while stateless
+     * mixes per-size pools and shares constant mbufs between nodes.
+     */
+    cfg->tx_offloads.common_required = RTE_ETH_TX_OFFLOAD_MULTI_SEGS;
 }
 
 void CTRexExtendedDriverIce::reset_rx_stats(CPhyEthIF * _if, uint32_t *stats, int min, int len) {
